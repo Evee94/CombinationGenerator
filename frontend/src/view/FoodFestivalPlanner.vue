@@ -1,4 +1,11 @@
 <template>
+  <div class="planner-header">
+    <div class="planner-header-right">
+      <router-link to="/history" class="nav-link">History</router-link>
+      <router-link to="/profile" class="nav-link">{{ authStore.user?.name }}</router-link>
+      <button class="logout-btn" @click="handleLogout">Logout</button>
+    </div>
+  </div>
   <div class="container">
     <h1 class="title">Welcome to Food Festival Planner</h1>
     <div class="main-content">
@@ -97,6 +104,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useCombinationStore } from '../store/combinationStore'
 import { useParameterStore } from '../store/parameterStore'
+import { useAuthStore } from '../store/authStore'
 import { getParameterValues } from '../config/api'
 import { generate3WiseCombinations } from '../services/combinationService'
 
@@ -104,6 +112,7 @@ const selectedParameter = ref('')
 const router = useRouter()
 const combinationStore = useCombinationStore()
 const parameterStore = useParameterStore()
+const authStore = useAuthStore()
 const { displayedParameters, selectedParameterNames } = storeToRefs(parameterStore)
 const currentValues = ref([])
 const errorMessage = ref('')
@@ -319,9 +328,64 @@ const handleGenerate = () => {
   combinationStore.setCombinations(combinations);
   router.push({ name: 'ResultPage' });
 }
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push({ name: 'Login' })
+}
 </script>
 
 <style scoped>
+.planner-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  padding: 12px 24px;
+  background: #f7d3a6;
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  box-sizing: border-box;
+}
+.planner-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.nav-link {
+  color: #333;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 4px 10px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.nav-link:hover {
+  background: #f0c58a;
+}
+.user-name {
+  color: #555;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.logout-btn {
+  background: none;
+  border: 1px solid #999;
+  color: #333;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.logout-btn:hover {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}
+
 .container {
   min-height: 100vh;
   display: flex;
@@ -329,6 +393,7 @@ const handleGenerate = () => {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  padding-top: 60px;
   box-sizing: border-box;
 }
 

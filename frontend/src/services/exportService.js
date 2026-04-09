@@ -133,8 +133,74 @@ export class ExportService {
     }
 
     try {
-      const imageData = await this.convertTableToImage(tableElement);
-      this.downloadFile(imageData, filename, 'image/png');
+      // Create a styled container for capture
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '-9999px';
+      container.style.background = '#f7d3a6';
+      container.style.padding = '24px';
+      container.style.fontFamily = 'Arial, sans-serif';
+
+      const title = document.createElement('h2');
+      title.textContent = 'Food Festival Vendor Distribution';
+      title.style.margin = '0 0 20px 0';
+      title.style.color = '#333';
+      title.style.textAlign = 'center';
+
+      const clonedTable = tableElement.cloneNode(true);
+      clonedTable.style.borderCollapse = 'collapse';
+      clonedTable.style.width = '100%';
+      clonedTable.style.backgroundColor = '#fff';
+
+      const cells = clonedTable.querySelectorAll('th, td');
+      cells.forEach(cell => {
+        cell.style.border = '1px solid #aaa';
+        cell.style.padding = '8px 16px';
+        cell.style.textAlign = 'center';
+        cell.style.fontSize = '14px';
+        cell.style.color = '#333';
+      });
+
+      const headerCells = clonedTable.querySelectorAll('th');
+      headerCells.forEach(cell => {
+        cell.style.backgroundColor = '#f7d3a6';
+        cell.style.fontWeight = 'bold';
+      });
+
+      const mergedCells = clonedTable.querySelectorAll('.merged-cell');
+      mergedCells.forEach(cell => {
+        cell.style.backgroundColor = '#f9f9f9';
+        cell.style.fontWeight = 'bold';
+      });
+
+      container.appendChild(title);
+      container.appendChild(clonedTable);
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(container, {
+        backgroundColor: '#f7d3a6',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      document.body.removeChild(container);
+
+      // Convert canvas to blob and download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          throw new Error('Failed to generate image');
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 'image/png');
     } catch (error) {
       throw new Error(`Failed to export image: ${error.message}`);
     }
@@ -163,151 +229,6 @@ export class ExportService {
     });
     
     return csvRows.join('\n');
-  }
-
-  /**
-   * Convert table element to image data URL
-   * @param {HTMLElement} tableElement - The table element to capture
-   * @returns {Promise<string>} Image data URL
-   */
-  static async convertTableToImage(tableElement) {
-    return new Promise((resolve, reject) => {
-      try {
-        // Create a container with proper styling
-        const container = document.createElement('div');
-        container.style.position = 'absolute';
-        container.style.left = '-9999px';
-        container.style.top = '-9999px';
-        container.style.background = '#f7d3a6';
-        container.style.padding = '20px';
-        container.style.fontFamily = 'Arial, sans-serif';
-        
-        // Clone the table and add title
-        const title = document.createElement('h2');
-        title.textContent = '3-Wise Combinations';
-        title.style.margin = '0 0 20px 0';
-        title.style.color = '#333';
-        title.style.textAlign = 'center';
-        
-        const clonedTable = tableElement.cloneNode(true);
-        
-        // Style the cloned table
-        clonedTable.style.borderCollapse = 'collapse';
-        clonedTable.style.width = '100%';
-        clonedTable.style.backgroundColor = '#fff';
-        clonedTable.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-        
-        // Style table cells
-        const cells = clonedTable.querySelectorAll('th, td');
-        cells.forEach(cell => {
-          cell.style.border = '1px solid #aaa';
-          cell.style.padding = '8px 16px';
-          cell.style.textAlign = 'center';
-          cell.style.fontSize = '14px';
-        });
-        
-        // Style header cells
-        const headerCells = clonedTable.querySelectorAll('th');
-        headerCells.forEach(cell => {
-          cell.style.backgroundColor = '#f7d3a6';
-          cell.style.fontWeight = 'bold';
-        });
-        
-        container.appendChild(title);
-        container.appendChild(clonedTable);
-        document.body.appendChild(container);
-        
-        // Use html2canvas if available, otherwise fallback to canvas
-        if (typeof html2canvas !== 'undefined') {
-          html2canvas(container, {
-            backgroundColor: '#f7d3a6',
-            scale: 2,
-            useCORS: true,
-            allowTaint: true
-          }).then(canvas => {
-            const imageData = canvas.toDataURL('image/png');
-            document.body.removeChild(container);
-            resolve(imageData);
-          }).catch(error => {
-            document.body.removeChild(container);
-            reject(error);
-          });
-        } else {
-          // Fallback to manual canvas drawing
-          const canvas = this.drawTableToCanvas(clonedTable);
-          const imageData = canvas.toDataURL('image/png');
-          document.body.removeChild(container);
-          resolve(imageData);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  /**
-   * Draw table to canvas manually (fallback method)
-   * @param {HTMLElement} tableElement - The table element to draw
-   * @returns {HTMLCanvasElement} Canvas element with table image
-   */
-  static drawTableToCanvas(tableElement) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Calculate dimensions
-    const rows = tableElement.querySelectorAll('tr');
-    const cols = rows[0]?.querySelectorAll('th, td') || [];
-    const cellWidth = 120;
-    const cellHeight = 40;
-    const headerHeight = 50;
-    
-    canvas.width = cols.length * cellWidth + 40;
-    canvas.height = rows.length * cellHeight + headerHeight + 40;
-    
-    // Draw background
-    ctx.fillStyle = '#f7d3a6';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw title
-    ctx.fillStyle = '#333';
-    ctx.font = 'bold 18px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('3-Wise Combinations', canvas.width / 2, 25);
-    
-    // Draw table
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(20, headerHeight, canvas.width - 40, canvas.height - headerHeight - 20);
-    
-    // Draw table content
-    ctx.fillStyle = '#333';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'center';
-    
-    rows.forEach((row, rowIndex) => {
-      const cells = row.querySelectorAll('th, td');
-      const y = headerHeight + 20 + rowIndex * cellHeight;
-      
-      cells.forEach((cell, colIndex) => {
-        const x = 20 + colIndex * cellWidth;
-        
-        // Draw cell border
-        ctx.strokeStyle = '#aaa';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x, y - 20, cellWidth, cellHeight);
-        
-        // Draw cell background for headers
-        if (rowIndex === 0) {
-          ctx.fillStyle = '#f7d3a6';
-          ctx.fillRect(x, y - 20, cellWidth, cellHeight);
-          ctx.fillStyle = '#333';
-        }
-        
-        // Draw cell text
-        ctx.fillText(cell.textContent, x + cellWidth / 2, y + 5);
-      });
-    });
-    
-    return canvas;
   }
 
   /**

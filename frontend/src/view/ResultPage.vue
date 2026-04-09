@@ -37,6 +37,16 @@
           </tbody>
         </table>
       </div>
+      <div class="history-button">
+        <button @click="handleSaveHistory" class="save-history-btn" :disabled="savingHistory">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M19 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3H16L21 8V19C21 20.1 20.1 21 19 21Z" stroke="currentColor" stroke-width="2"/>
+            <path d="M17 21V13H7V21" stroke="currentColor" stroke-width="2"/>
+            <path d="M7 3V8H15" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          {{ savingHistory ? 'Saving...' : 'Save to History' }}
+        </button>
+      </div>
     </div>
     
     <div v-else>No combinations generated.</div>
@@ -71,6 +81,7 @@
           </svg>
           Export Image
         </button>
+        
       </div>
       <div v-if="exportMessage" class="export-message" :class="exportMessageType">
         {{ exportMessage }}
@@ -82,10 +93,13 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useCombinationStore } from '../store/combinationStore'
+import { useParameterStore } from '../store/parameterStore'
 import { ExportService } from '../services/exportService'
+import { historyService } from '../services/historyService'
 import Header from '../components/Header.vue'
 
 const combinationStore = useCombinationStore()
+const parameterStore = useParameterStore()
 const combinations = computed(() => combinationStore.combinations)
 
 // Group combinations by total vendor count, then by cuisine type
@@ -114,6 +128,7 @@ const groupedCombinations = computed(() => {
 // Export functionality
 const exportMessage = ref('')
 const exportMessageType = ref('success')
+const savingHistory = ref(false)
 
 /**
  * Handle CSV export with error handling
@@ -169,6 +184,25 @@ const showExportMessage = (message, type) => {
   setTimeout(() => {
     exportMessage.value = ''
   }, 3000)
+}
+
+/**
+ * Save current generation to history
+ */
+const handleSaveHistory = async () => {
+  savingHistory.value = true
+  try {
+    const parameters = parameterStore.displayedParameters.map((p, idx) => ({
+      parameter: parameterStore.selectedParameterNames[idx],
+      values: p.values,
+    }))
+    await historyService.save(parameters, combinations.value)
+    showExportMessage('Saved to history!', 'success')
+  } catch (error) {
+    showExportMessage(`Save failed: ${error.response?.data?.message || error.message}`, 'error')
+  } finally {
+    savingHistory.value = false
+  }
 }
 </script>
 
@@ -279,6 +313,27 @@ const showExportMessage = (message, type) => {
 
 .image-btn:hover {
   border-color: #FF9800;
+}
+
+.history-button {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.save-history-btn {
+  background: #e8f5e9;
+  border-color: #4CAF50;
+  color: #2e7d32;
+}
+
+.save-history-btn:hover:not(:disabled) {
+  background: #c8e6c9;
+}
+
+.save-history-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .export-message {
